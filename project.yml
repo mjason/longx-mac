@@ -1,0 +1,40 @@
+name: LongX
+options:
+  developmentLanguage: en
+  knownRegions: [en, zh-Hans]
+  bundleIdPrefix: plus.diz
+  deploymentTarget:
+    macOS: '14.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    DEVELOPMENT_TEAM: ''
+targets:
+  LongX:
+    type: application
+    platform: macOS
+    sources: [LongX]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: plus.diz.longx.mac
+        PRODUCT_NAME: LongX
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: LongX
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoadsInWebContent: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: LongX/LongX.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        MARKETING_VERSION: '0.1.0'
+        CURRENT_PROJECT_VERSION: '1'
+    scheme:
+      testTargets: [LongXTests]
+  LongXTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [Tests]
+    dependencies:
+      - target: LongX
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES

@@ -1,0 +1,3 @@
+[submodule "vendor/longx"]
+	path = vendor/longx
+	url = https://github.com/mjason/longx.git
