@@ -34,5 +34,5 @@ release_zip="dist/LongX-${release_version}-macOS-universal.zip"
 mkdir -p dist
 ditto -c -k --keepParent "$release_app" "$release_work/final.zip"
 mv "$release_work/final.zip" "$release_zip"
-shasum -a 256 "$release_zip" > "$release_zip.sha256"
+(cd dist && shasum -a 256 "${release_zip:t}" > "${release_zip:t}.sha256")
 print "Signed and notarized release: $PWD/$release_zip"
