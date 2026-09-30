@@ -17,7 +17,7 @@ open build/Build/Products/Release/LongX.app
 
 macOS 26 及以上使用系统原生 Liquid Glass：覆盖网页的弹出服务器面板、系统玻璃工具栏、玻璃添加按钮、玻璃弹窗操作按钮及错误提示浮层。服务器面板由工具栏按钮打开，切换后自动收起，点击面板外或按 Escape 关闭；面板通过 overlay 显示，不改变 WKWebView 尺寸。macOS 14–15 回退为系统材质与标准按钮；保留系统的降低透明度和辅助功能行为。
 
-原生顶部在主页读取网页 `--background`，项目页读取 `--sidebar`，随页面导航同步，与网页顶部连续显示；网页显式浅色/暗黑主题同步到原生控件，跟随系统时保留系统外观变化。网页 Tab 保留上游原样；客户端不注入 CSS，不修改网页布局或 Tab 样式。
+顶部背景及深浅主题由网页 JS 主动通过 `window.longxNative.setChrome` 设置；原生不读取 CSS、localStorage 或根据路由判断外观。导航时只发送刷新请求，网页决定响应值。接口和接入示例见 [docs/WEB-CHROME-API.md](docs/WEB-CHROME-API.md)。网页 Tab 保留上游原样；客户端不注入 CSS，不修改网页布局或 Tab 样式。
 
 ## 语言
 

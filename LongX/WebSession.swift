@@ -25,7 +25,7 @@ final class LongXWebView: WKWebView {
 private final class ChromeMessageHandler: NSObject, WKScriptMessageHandler {
     weak var session: WebSession?
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.frameInfo.isMainFrame, let payload = message.body as? [String: String] else { return }
+        guard message.frameInfo.isMainFrame, let payload = message.body as? [String: Any] else { return }
         session?.updateChrome(payload)
     }
 }
@@ -67,42 +67,21 @@ final class WebSession: NSObject, ObservableObject, WKNavigationDelegate, WKUIDe
         super.init()
         chromeHandler.session = self
         config.userContentController.add(chromeHandler, name: "longxChrome")
+        // The webpage owns color and appearance. This bridge never inspects CSS or routes.
         let chromeScript = """
         (() => {
-          let last = '';
-          let scheduled = false;
-          const sync = () => {
-            scheduled = false;
-            const root = document.documentElement;
-            const frameToken = location.pathname.startsWith('/p/') ? '--sidebar' : '--background';
-            const payload = {
-              frame: getComputedStyle(root).getPropertyValue(frameToken).trim(),
-              page: location.href,
-              preference: localStorage.getItem('longx:theme') || 'system'
-            };
-            const encoded = JSON.stringify(payload);
-            if (encoded === last) return;
-            last = encoded;
-            window.webkit.messageHandlers.longxChrome.postMessage(payload);
-          };
-          new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] });
-          const schedule = () => {
-            if (!scheduled) { scheduled = true; requestAnimationFrame(sync); }
-          };
-          window.__longxRefreshChrome = () => {
-            last = '';
-            sync();
-            schedule();
-          };
-          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
-          new MutationObserver(schedule).observe(document.head, { childList: true, subtree: true, attributes: true });
-          window.addEventListener('popstate', schedule);
-          matchMedia('(prefers-color-scheme: dark)').addEventListener('change', sync);
-          window.addEventListener('load', sync);
-          sync();
+          window.longxNative = Object.freeze({
+            version: 1,
+            setChrome({ background, theme } = {}) {
+              if (typeof background !== 'string' || !/^#[0-9a-f]{6}$/i.test(background)
+                  || !['light', 'dark', 'system'].includes(theme)) return false;
+              window.webkit.messageHandlers.longxChrome.postMessage({ version: 1, background, theme });
+              return true;
+            }
+          });
         })();
         """
-        config.userContentController.addUserScript(WKUserScript(source: chromeScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        config.userContentController.addUserScript(WKUserScript(source: chromeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
@@ -120,14 +99,17 @@ final class WebSession: NSObject, ObservableObject, WKNavigationDelegate, WKUIDe
         webView.load(URLRequest(url: server.url))
     }
 
-    fileprivate func updateChrome(_ payload: [String: String]) {
-        if let hex = payload["frame"], hex.count == 7, hex.hasPrefix("#"),
-           let value = UInt32(hex.dropFirst(), radix: 16) {
-            chromeColor = Color(red: Double((value >> 16) & 255) / 255,
-                                green: Double((value >> 8) & 255) / 255,
-                                blue: Double(value & 255) / 255)
-        }
-        switch payload["preference"] {
+    func updateChrome(_ payload: [String: Any]) {
+        // Validate the whole message before changing either property.
+        guard payload["version"] as? Int == 1,
+              let hex = payload["background"] as? String, hex.count == 7, hex.hasPrefix("#"),
+              hex.dropFirst().allSatisfy({ $0.isASCII && $0.isHexDigit }),
+              let value = UInt32(hex.dropFirst(), radix: 16),
+              let theme = payload["theme"] as? String, ["light", "dark", "system"].contains(theme) else { return }
+        chromeColor = Color(red: Double((value >> 16) & 255) / 255,
+                            green: Double((value >> 8) & 255) / 255,
+                            blue: Double(value & 255) / 255)
+        switch theme {
         case "dark": preferredScheme = .dark
         case "light": preferredScheme = .light
         default: preferredScheme = nil
@@ -135,7 +117,8 @@ final class WebSession: NSObject, ObservableObject, WKNavigationDelegate, WKUIDe
     }
 
     private func refreshChrome() {
-        webView.evaluateJavaScript("window.__longxRefreshChrome?.()", completionHandler: nil)
+        // Request a fresh value after navigation; JS chooses what to send, if anything.
+        webView.evaluateJavaScript("window.dispatchEvent(new Event('longx:chrome-request'))", completionHandler: nil)
     }
 
     func reload() { error = nil; webView.reload() }

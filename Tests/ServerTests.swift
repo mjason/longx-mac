@@ -42,26 +42,53 @@ final class ServerTests: XCTestCase {
         pool.remove(server.id)
     }
 
-    @MainActor func testChromeRefreshForRouteAndPageStyleChanges() async throws {
+    @MainActor func testChromeBridgeReceivesWebpageValues() async throws {
         let session = WebSession(server: Server(name: "Chrome", address: "http://127.0.0.1:1"))
-        session.webView.loadHTMLString("""
-        <html style="--background:#ffffff;--sidebar:#15171c"><head></head><body>Page</body></html>
-        """, baseURL: URL(string: "http://127.0.0.1:1/"))
-        func waitForColor(_ expected: Color) async throws {
-            for _ in 0..<200 {
-                if session.chromeColor == expected { return }
-                try await Task.sleep(nanoseconds: 10_000_000)
-            }
-            XCTFail("Toolbar color did not refresh")
+        session.webView.loadHTMLString("<html><body>Page</body></html>", baseURL: URL(string: "http://127.0.0.1:1/"))
+        var ready = false
+        for _ in 0..<500 {
+            if (try? await session.webView.evaluateJavaScript("typeof window.longxNative === 'object'")) as? Bool == true { ready = true; break }
+            try await Task.sleep(nanoseconds: 10_000_000)
         }
-        try await waitForColor(Color(red: 1, green: 1, blue: 1))
-        _ = try await session.webView.evaluateJavaScript("history.pushState({}, '', '/p/test')")
-        try await waitForColor(Color(red: 21.0 / 255, green: 23.0 / 255, blue: 28.0 / 255))
-        _ = try await session.webView.evaluateJavaScript("document.documentElement.style.setProperty('--sidebar', '#262931')")
-        try await waitForColor(Color(red: 38.0 / 255, green: 41.0 / 255, blue: 49.0 / 255))
-        _ = try await session.webView.evaluateJavaScript("history.replaceState({}, '', '/')")
-        try await waitForColor(Color(red: 1, green: 1, blue: 1))
+        XCTAssertTrue(ready)
+        _ = try await session.webView.evaluateJavaScript("""
+        window.addEventListener('longx:chrome-request', () => {
+          window.longxNative.setChrome({background:'#15171c',theme:'dark'});
+        });
+        history.pushState({}, '', '/any-page');
+        """)
+        for _ in 0..<500 {
+            if session.preferredScheme == .dark { break }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertEqual(session.preferredScheme, .dark)
+        XCTAssertEqual(session.chromeColor, Color(red: 21.0 / 255, green: 23.0 / 255, blue: 28.0 / 255))
+        _ = try await session.webView.evaluateJavaScript("window.longxNative.setChrome({background:'#ffffff',theme:'light'})")
+        for _ in 0..<500 {
+            if session.preferredScheme == .light { break }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertEqual(session.preferredScheme, .light)
+        XCTAssertEqual(session.chromeColor, Color(red: 1, green: 1, blue: 1))
         session.webView.stopLoading()
     }
 
+    @MainActor func testChromeRejectsMalformedPayloadsAndAllowsSystemTheme() {
+        let session = WebSession(server: Server(name: "Chrome", address: "http://127.0.0.1:1"))
+        session.updateChrome(["version": 1, "background": "#123456", "theme": "dark"])
+        let color = session.chromeColor
+        for payload: [String: Any] in [
+            ["version": 2, "background": "#ffffff", "theme": "light"],
+            ["version": 1, "background": "#xyzxyz", "theme": "light"],
+            ["version": 1, "background": "#ffffff", "theme": "unknown"],
+            ["background": "#ffffff", "theme": "light"]
+        ] {
+            session.updateChrome(payload)
+            XCTAssertEqual(session.chromeColor, color)
+            XCTAssertEqual(session.preferredScheme, .dark)
+        }
+        session.updateChrome(["version": 1, "background": "#ffffff", "theme": "system"])
+        XCTAssertNil(session.preferredScheme)
+        session.webView.stopLoading()
+    }
 }
