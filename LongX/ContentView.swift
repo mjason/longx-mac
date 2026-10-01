@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 struct ContentView: View {
     @ObservedObject var store: ServerStore
@@ -19,7 +20,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if let server = store.selected {
-                SessionView(session: pool.session(for: server))
+                SessionView(session: pool.session(for: server), retainedWebViews: pool.retainedWebViews)
             } else {
                 ContentUnavailableView {
                     Label(String(localized: "Add Your LongX Server"), systemImage: "server.rack")
@@ -154,6 +155,7 @@ struct ContentView: View {
 
 struct SessionView: View {
     @ObservedObject var session: WebSession
+    let retainedWebViews: [WKWebView]
     var body: some View {
         VStack(spacing: 0) {
             if let error = session.error {
@@ -165,7 +167,7 @@ struct SessionView: View {
                 }.padding(12).longXGlassPanel().padding(8)
             }
             ZStack(alignment: .top) {
-                WebSurface(webView: session.webView)
+                WebSurface(webView: session.webView, retainedWebViews: retainedWebViews)
                 if session.loading { ProgressView(value: session.progress).progressViewStyle(.linear) }
             }
         }

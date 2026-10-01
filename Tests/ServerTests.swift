@@ -1,5 +1,6 @@
 import XCTest
 import SwiftUI
+import WebKit
 @testable import LongX
 
 final class ServerTests: XCTestCase {
@@ -91,4 +92,32 @@ final class ServerTests: XCTestCase {
         XCTAssertNil(session.preferredScheme)
         session.webView.stopLoading()
     }
+
+    @MainActor func testSwitchingKeepsBothWebViewsAttachedToSameWindow() {
+        let a = WKWebView(), b = WKWebView()
+        let host = WebSurfaceHost()
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 600), styleMask: .borderless, backing: .buffered, defer: false)
+        window.contentView = host
+        host.show(a, retaining: [a, b])
+        let constraints = host.constraints.map(ObjectIdentifier.init)
+        for _ in 0..<20 {
+            host.show(b, retaining: [a, b])
+            XCTAssertTrue(a.superview === host)
+            XCTAssertTrue(b.superview === host)
+            XCTAssertTrue(a.window === window)
+            XCTAssertTrue(b.window === window)
+            XCTAssertTrue(a.isHidden)
+            XCTAssertFalse(b.isHidden)
+            host.show(a, retaining: [a, b])
+            XCTAssertFalse(a.isHidden)
+            XCTAssertTrue(b.isHidden)
+            XCTAssertEqual(host.constraints.map(ObjectIdentifier.init), constraints)
+        }
+        host.show(a, retaining: [a])
+        XCTAssertNil(b.superview)
+        XCTAssertEqual(host.subviews.count, 1)
+        XCTAssertEqual(host.constraints.count, 4)
+        window.contentView = nil
+    }
+
 }

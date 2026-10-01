@@ -210,25 +210,53 @@ final class SessionPool: ObservableObject {
         sessions[server.id] = session
         return session
     }
+    var retainedWebViews: [WKWebView] { sessions.values.map { $0.webView } }
+
     func remove(_ id: UUID) {
         sessions.removeValue(forKey: id)?.webView.stopLoading()
         WKWebsiteDataStore.remove(forIdentifier: id) { _ in }
     }
 }
 
+// Each visited server keeps a permanent child in this window. Only address changes
+// and explicit removal detach a web view; selection changes only visibility/focus.
+final class WebSurfaceHost: NSView {
+    private weak var selectedWebView: WKWebView?
+
+    func show(_ selected: WKWebView, retaining webViews: [WKWebView]) {
+        let retained = Set(webViews.map { ObjectIdentifier($0) })
+        for child in subviews where !retained.contains(ObjectIdentifier(child)) {
+            // Remove only constraints belonging to a discarded session.
+            removeConstraints(constraints.filter { $0.firstItem as? NSView === child || $0.secondItem as? NSView === child })
+            child.removeFromSuperview()
+        }
+        for view in webViews where view.superview !== self {
+            view.isHidden = true
+            addSubview(view)
+            view.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                view.leadingAnchor.constraint(equalTo: leadingAnchor), view.trailingAnchor.constraint(equalTo: trailingAnchor),
+                view.topAnchor.constraint(equalTo: topAnchor), view.bottomAnchor.constraint(equalTo: bottomAnchor)
+            ])
+        }
+        for view in webViews { view.isHidden = view !== selected }
+        if selectedWebView !== selected {
+            selectedWebView = selected
+            window?.makeFirstResponder(selected)
+        }
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let selectedWebView { window?.makeFirstResponder(selectedWebView) }
+    }
+}
+
 struct WebSurface: NSViewRepresentable {
     let webView: WKWebView
-    func makeNSView(context: Context) -> NSView { NSView() }
-    func updateNSView(_ host: NSView, context: Context) {
-        guard webView.superview !== host else { return }
-        host.subviews.forEach { $0.removeFromSuperview() }
-        webView.removeFromSuperview()
-        host.addSubview(webView)
-        webView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            webView.leadingAnchor.constraint(equalTo: host.leadingAnchor), webView.trailingAnchor.constraint(equalTo: host.trailingAnchor),
-            webView.topAnchor.constraint(equalTo: host.topAnchor), webView.bottomAnchor.constraint(equalTo: host.bottomAnchor)
-        ])
-        DispatchQueue.main.async { host.window?.makeFirstResponder(webView) }
+    let retainedWebViews: [WKWebView]
+    func makeNSView(context: Context) -> WebSurfaceHost { WebSurfaceHost() }
+    func updateNSView(_ host: WebSurfaceHost, context: Context) {
+        host.show(webView, retaining: retainedWebViews)
     }
 }
