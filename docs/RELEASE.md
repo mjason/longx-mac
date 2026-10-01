@@ -30,7 +30,10 @@ LONGX_NOTARY_PROFILE='LongX-notary' ./scripts/release.sh
 - `NOTARY_APPLE_ID`：公证 Apple ID。
 - `NOTARY_TEAM_ID`：开发者 Team ID。
 - `NOTARY_PASSWORD`：Apple 应用专用密码。
+- `SPARKLE_PRIVATE_KEY`：Sparkle 工具导出的 Ed25519 私钥，仅存放在 GitHub Secrets。
 
-证书和私钥在临时钥匙串内导入，流程结束自动删除。私钥、P12、密码均不进入仓库或发布包。客户端通过 GitHub `releases/latest` 检查正式版本，每日自动检查及 LongX 菜单手动检查；只对含标准下载包的非草稿、非预发布版本提示更新，打开官方 Release 页面供用户下载，暂不在后台安装更新。
+证书和私钥在临时钥匙串内导入，流程结束自动删除。私钥、P12、密码均不进入仓库或发布包。客户端使用 Sparkle 自动下载和安装更新。稳定订阅地址为 `https://github.com/mjason/longx-mac/releases/latest/download/appcast.xml`。每次 Release 同时上传更新 ZIP、SHA-256 及签名订阅文件；只在完整发布后更新 latest。Sparkle 公钥固定在 Info.plist 中，私钥在生成订阅后立即删除。不要手工修改签名后的 appcast.xml。版本的 CFBundleVersion 必须递增。
 
-发布版本 0.1.0；Developer ID G2 Application 证书已于 2026-09-30 创建，有效期至 2031-09-17。
+沙盒开启 Installer Launcher 服务及专用 mach-lookup 权限；下载使用原有 network.client 权限。Release 脚本从里到外重新签名 Sparkle 的 XPC 和辅助进程，再签主 App，并提交整体公证。默认自动检查和下载，准备完更新在退出时安装；手动检查提供 App 内安装/重启。0.1.2 之前版本没有安装器，需要一次安装 0.1.3。
+
+当前发布版本 0.1.3；Developer ID G2 Application 证书已于 2026-09-30 创建，有效期至 2031-09-17。

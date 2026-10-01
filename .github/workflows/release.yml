@@ -33,10 +33,11 @@ jobs:
           APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
           TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
           APPLE_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid release tag'; exit 1; }
-          for value in CERTIFICATE CERTIFICATE_PASSWORD LONGX_SIGNING_IDENTITY APPLE_ID TEAM_ID APPLE_PASSWORD; do
+          for value in CERTIFICATE CERTIFICATE_PASSWORD LONGX_SIGNING_IDENTITY APPLE_ID TEAM_ID APPLE_PASSWORD SPARKLE_KEY; do
             [[ -n "${!value}" ]] || { echo "Missing required secret: $value"; exit 1; }
           done
           version=$(xcodebuild -project LongX.xcodeproj -scheme LongX -configuration Release -showBuildSettings | awk '/ MARKETING_VERSION = / {if (!v) v=$3} END {print v}')
@@ -66,19 +67,33 @@ jobs:
         run: xcodebuild -project LongX.xcodeproj -scheme LongX -configuration Debug -destination 'platform=macOS' -derivedDataPath "$RUNNER_TEMP/LongX-tests" CODE_SIGN_IDENTITY=- test
       - name: Build, sign, notarize and package
         run: ./scripts/release.sh
+      - name: Generate signed update feed
+        env:
+          SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/Sparkle-tools"
+          mkdir -p "$tools"
+          curl -fsSL https://github.com/sparkle-project/Sparkle/releases/download/2.10.0/Sparkle-2.10.0.tar.xz -o "$tools/release.tar.xz"
+          tar -xf "$tools/release.tar.xz" -C "$tools"
+          umask 077
+          printf '%s' "$SPARKLE_KEY" > "$RUNNER_TEMP/Sparkle-private-key"
+          "$tools/bin/generate_appcast" --ed-key-file "$RUNNER_TEMP/Sparkle-private-key" --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/$RELEASE_TAG/" --maximum-deltas 0 dist
+          rm "$RUNNER_TEMP/Sparkle-private-key"
+          test -s dist/appcast.xml
       - name: Publish Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" dist/*.zip dist/*.sha256 --clobber
+            gh release upload "$RELEASE_TAG" dist/*.zip dist/*.sha256 dist/appcast.xml* --clobber
             gh release edit "$RELEASE_TAG" --draft=false --latest
           else
-            gh release create "$RELEASE_TAG" dist/*.zip dist/*.sha256 --verify-tag --title "LongX $RELEASE_TAG" --generate-notes --latest
+            gh release create "$RELEASE_TAG" dist/*.zip dist/*.sha256 dist/appcast.xml* --verify-tag --title "LongX $RELEASE_TAG" --generate-notes --latest
           fi
       - name: Remove signing material
         if: always()
         run: |
           security delete-keychain "$RUNNER_TEMP/LongX-signing.keychain-db" || true
-          rm -f "$RUNNER_TEMP/LongX-signing.p12"
+          rm -f "$RUNNER_TEMP/LongX-signing.p12" "$RUNNER_TEMP/Sparkle-private-key"

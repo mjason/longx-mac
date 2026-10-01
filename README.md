@@ -50,13 +50,15 @@ macOS 26 及以上使用系统原生 Liquid Glass：覆盖网页的弹出服务�
 
 `vendor/longx` 是 https://github.com/mjason/longx 的 Git submodule，已 clone；后续可直接读取上游源码和文档。克隆客户端时使用 `git clone --recurse-submodules`，或执行 `git submodule update --init`。
 
+Sparkle 许可证见 `docs/SPARKLE-LICENSE`。
+
 Logo 和图标来自上游 `priv/static/images/logo-mark.png` 与 `priv/static/icons/icon-512.png`。上游许可证副本见 `docs/UPSTREAM-LICENSE`。客户端需求、方案和后续文档放在本项目 `docs/` 中。
 
 ## 发布与更新
 
 代码仓库：[mjason/longx-mac](https://github.com/mjason/longx-mac)。GitHub Actions 在版本标签上运行测试、Universal 构建、Developer ID 签名、Apple 公证及发布 ZIP；配置说明见 [docs/RELEASE.md](docs/RELEASE.md)。
 
-LongX 菜单提供「检查更新…」，也会每日检查一次 GitHub 最新正式版本。新版本就绪后可打开 Release 页面下载；自动检查没有更新或遇到网络错误时保持安静。更新检查仅使用客户端版本号，不发送服务器配置。
+LongX 通过 Sparkle 在 App 内自动检查、下载、验证并安装更新，默认每天检查，后台准备更新后在退出时安装；手动「检查更新…」可选择安装并重启。GitHub Actions 同时发布签名的 `appcast.xml` 和更新 ZIP。下载包及订阅文件使用 Ed25519 签名，安装包保留 Developer ID 签名和 Apple 公证。更新不发送服务器配置，Sparkle 系统信息收集默认关闭。0.1.2 及更早版本需要一次升级到 0.1.3，之后可直接在 App 内更新。
 
 ## 验证
 

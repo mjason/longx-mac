@@ -21,6 +21,16 @@ xcodebuild -project LongX.xcodeproj -scheme LongX -configuration Release \
   -derivedDataPath "$release_work/DerivedData" CODE_SIGNING_ALLOWED=NO \
   ONLY_ACTIVE_ARCH=NO 'ARCHS=arm64 x86_64' build
 release_app="$release_work/DerivedData/Build/Products/Release/LongX.app"
+# Re-sign embedded Sparkle components from the inside out before signing the app.
+sparkle_framework="$release_app/Contents/Frameworks/Sparkle.framework"
+if [[ -d "$sparkle_framework" ]]; then
+  sparkle_version="$sparkle_framework/Versions/B"
+  codesign --force --sign "$LONGX_SIGNING_IDENTITY" --options runtime --timestamp "$sparkle_version/XPCServices/Installer.xpc"
+  codesign --force --sign "$LONGX_SIGNING_IDENTITY" --options runtime --timestamp --preserve-metadata=entitlements "$sparkle_version/XPCServices/Downloader.xpc"
+  codesign --force --sign "$LONGX_SIGNING_IDENTITY" --options runtime --timestamp "$sparkle_version/Autoupdate"
+  codesign --force --sign "$LONGX_SIGNING_IDENTITY" --options runtime --timestamp "$sparkle_version/Updater.app"
+  codesign --force --sign "$LONGX_SIGNING_IDENTITY" --options runtime --timestamp "$sparkle_framework"
+fi
 codesign --force --sign "$LONGX_SIGNING_IDENTITY" --options runtime --timestamp \
   --entitlements LongX/LongX.entitlements "$release_app"
 codesign --verify --deep --strict --verbose=2 "$release_app"

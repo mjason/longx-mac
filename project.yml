@@ -9,24 +9,50 @@ settings:
   base:
     SWIFT_VERSION: '5.0'
     DEVELOPMENT_TEAM: ''
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.0
 targets:
   LongX:
     type: application
     platform: macOS
     sources: [LongX]
+    dependencies:
+      - package: Sparkle
+    info:
+      path: LongX/Info.plist
+      properties:
+        CFBundleDisplayName: LongX
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.developer-tools
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoadsInWebContent: true
+        SUFeedURL: https://github.com/mjason/longx-mac/releases/latest/download/appcast.xml
+        SUPublicEDKey: eFoAoxyZ8DYBgKI2+YsgOzCegXfFqRYIc5ohoK+qWhE=
+        SUEnableInstallerLauncherService: true
+        SUEnableAutomaticChecks: true
+        SUAutomaticallyUpdate: true
+        SUVerifyUpdateBeforeExtraction: true
+        SURequireSignedFeed: true
+        SUEnableSystemProfiling: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: plus.diz.longx.mac
         PRODUCT_NAME: LongX
-        GENERATE_INFOPLIST_FILE: YES
+        GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_KEY_CFBundleDisplayName: LongX
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
         INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoadsInWebContent: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: LongX/LongX.entitlements
         ENABLE_HARDENED_RUNTIME: YES
-        MARKETING_VERSION: '0.1.2'
-        CURRENT_PROJECT_VERSION: '3'
+        MARKETING_VERSION: '0.1.3'
+        CURRENT_PROJECT_VERSION: '4'
+      configs:
+        Debug:
+          ENABLE_HARDENED_RUNTIME: NO
     scheme:
       testTargets: [LongXTests]
   LongXTests:

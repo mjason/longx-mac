@@ -12,7 +12,6 @@ struct LongXApp: App {
         Window("LongX", id: "main") {
             ContentView(store: store, pool: pool, editing: $editing, showingEditor: $showingEditor)
                 .frame(minWidth: 900, minHeight: 600)
-                .task { await updater.checkAutomatically() }
                 .sheet(isPresented: $showingEditor) {
                     ServerEditorSheet(editing: $editing, store: store)
                 }
@@ -21,8 +20,12 @@ struct LongXApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
             CommandGroup(after: .appInfo) {
-                Button(String(localized: "Check for Updates…")) { Task { await updater.check() } }
-                    .disabled(updater.checking)
+                Button(String(localized: "Check for Updates…")) { updater.check() }
+                    .disabled(!updater.canCheckForUpdates)
+                Toggle(String(localized: "Automatically Download and Install Updates"), isOn: Binding(
+                    get: { updater.automaticallyDownloadsUpdates },
+                    set: { updater.setAutomaticUpdates($0) }
+                ))
             }
             CommandGroup(replacing: .appSettings) {
                 Button(String(localized: "Manage Servers…")) { editing = store.selected; showingEditor = true }
