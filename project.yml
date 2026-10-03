@@ -4,7 +4,7 @@ options:
   knownRegions: [en, zh-Hans]
   bundleIdPrefix: plus.diz
   deploymentTarget:
-    macOS: '14.0'
+    macOS: '15.0'
 settings:
   base:
     SWIFT_VERSION: '5.0'
@@ -48,8 +48,8 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: LongX/LongX.entitlements
         ENABLE_HARDENED_RUNTIME: YES
-        MARKETING_VERSION: '0.1.3'
-        CURRENT_PROJECT_VERSION: '4'
+        MARKETING_VERSION: '0.1.4'
+        CURRENT_PROJECT_VERSION: '5'
       configs:
         Debug:
           ENABLE_HARDENED_RUNTIME: NO

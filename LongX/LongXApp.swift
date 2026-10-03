@@ -17,6 +17,7 @@ struct LongXApp: App {
                 }
         }
         .defaultSize(width: 1360, height: 900)
+        .windowIdealSize(.maximum)
         .commands {
             CommandGroup(replacing: .newItem) {}
             CommandGroup(after: .appInfo) {
@@ -43,7 +44,7 @@ struct LongXApp: App {
                 Button(String(localized: "Reload Server")) { if let server = store.selected { pool.session(for: server).reload() } }
                     .keyboardShortcut("r", modifiers: .command)
             }
-            CommandGroup(replacing: .windowSize) {
+            CommandGroup(after: .windowSize) {
                 Button(String(localized: "Close Window")) { NSApp.keyWindow?.close() }
                     .keyboardShortcut("w", modifiers: [.command, .shift])
             }

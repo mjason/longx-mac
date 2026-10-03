@@ -1,6 +1,6 @@
 # LongX for macOS
 
-SwiftUI + WKWebView 的原生 LongX 客户端，macOS 14 或更高版本。默认服务器为 https://longx.diz.plus:7443。
+SwiftUI + WKWebView 的原生 LongX 客户端，macOS 15 或更高版本。默认服务器为 https://longx.diz.plus:7443。
 
 ## 开发与运行
 
@@ -15,7 +15,7 @@ open build/Build/Products/Release/LongX.app
 
 ## 液态玻璃
 
-macOS 26 及以上使用系统原生 Liquid Glass：覆盖网页的弹出服务器面板、系统玻璃工具栏、玻璃添加按钮、玻璃弹窗操作按钮及错误提示浮层。服务器面板由工具栏按钮打开，切换后自动收起，点击面板外或按 Escape 关闭；面板通过 overlay 显示，不改变 WKWebView 尺寸。macOS 14–15 回退为系统材质与标准按钮；保留系统的降低透明度和辅助功能行为。
+macOS 26 及以上使用系统原生 Liquid Glass：覆盖网页的弹出服务器面板、系统玻璃工具栏、玻璃添加按钮、玻璃弹窗操作按钮及错误提示浮层。服务器面板由工具栏按钮打开，切换后自动收起，点击面板外或按 Escape 关闭；面板通过 overlay 显示，不改变 WKWebView 尺寸。macOS 15–25 回退为系统材质与标准按钮；保留系统的降低透明度和辅助功能行为。
 
 顶部背景及深浅主题由网页 JS 主动通过 `window.longxNative.setChrome` 设置；原生不读取 CSS、localStorage 或根据路由判断外观。导航时只发送刷新请求，网页决定响应值。接口和接入示例见 [docs/WEB-CHROME-API.md](docs/WEB-CHROME-API.md)。网页 Tab 保留上游原样；客户端不注入 CSS，不修改网页布局或 Tab 样式。
 
@@ -69,3 +69,5 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 ```
 
 单元测试覆盖地址验证、配置持久化、选中服务器恢复、移除后的回退、WKWebView 复用与地址变化失效。实际界面已检查默认服务器加载、⌘K 命令面板、添加服务器、⌘⌥1/2 切换和搜索输入保留、⌘W 不关闭窗口以及移除临时配置。尚未实测附件上传下载、复杂 OAuth 流程及后台长期连接。
+
+窗口保留系统缩放、最小化和填充命令；缩放使用最大可用尺寸，标题栏双击遵循 macOS 的双击设置。
